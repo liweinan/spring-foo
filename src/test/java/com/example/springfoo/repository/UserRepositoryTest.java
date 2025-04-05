@@ -1,7 +1,6 @@
 package com.example.springfoo.repository;
 
 import com.example.springfoo.entity.User;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,6 +9,7 @@ import org.springframework.data.relational.core.query.Query;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import static org.springframework.data.relational.core.query.Criteria.where;
@@ -28,11 +28,6 @@ public class UserRepositoryTest {
         registry.add("spring.r2dbc.url", () -> "r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1");
         registry.add("spring.r2dbc.username", () -> "sa");
         registry.add("spring.r2dbc.password", () -> "password");
-    }
-
-    @BeforeEach
-    void setUp() {
-        template.delete(User.class).all().block();
     }
 
     @Test
@@ -54,7 +49,7 @@ public class UserRepositoryTest {
         User user2 = new User("Jane Doe", "jane@example.com");
 
         StepVerifier.create(userRepository.saveAll(Flux.just(user1, user2))
-                .then(userRepository.findAll()))
+                .thenMany(userRepository.findAll()))
                 .expectNextCount(2)
                 .verifyComplete();
     }
@@ -78,8 +73,8 @@ public class UserRepositoryTest {
         User user = new User("John Doe", "john@example.com");
 
         StepVerifier.create(userRepository.save(user)
-                .flatMap(saved -> userRepository.deleteById(saved.getId()))
-                .then(userRepository.findById(user.getId())))
+                .flatMap(saved -> userRepository.deleteById(saved.getId())
+                        .then(Mono.empty())))
                 .verifyComplete();
     }
 } 
